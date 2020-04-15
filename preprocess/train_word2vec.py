@@ -1,5 +1,4 @@
-import re
-import os, string
+import os
 import config
 import time
 from gensim.models import Word2Vec

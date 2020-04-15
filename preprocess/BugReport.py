@@ -24,12 +24,6 @@ class BugReport(object):
     RecallRate=[0]*25
     def __init__(self):
         self.bugID=''
-        self.version=''
-        self.prod=''
-        self.comp=''
-        self.sever=''
-        self.commit=''
-        self.priority=''
         self.summ=''
         self.summ_unigram=[]
         self.desc_unigram=[]
@@ -42,8 +36,6 @@ class BugReport(object):
         self.totalWords_bigram=[]
         self.summ_times_bigram=defaultdict(int)
         self.desc_times_bigram=defaultdict(int)
-        self.fixed_files=[]
-        self.report_time=''
     def getcomWord_unigram(self):
         comWord_unigram = defaultdict(set)
         for i in range(len(self.totalWords_unigram)):
@@ -52,7 +44,6 @@ class BugReport(object):
                 comWord_unigram[bug_id].add(self.totalWords_unigram[i])
         return comWord_unigram
 
-
     def getcomWord_bigram(self):
         comWord_bigram = defaultdict(set)
         for i in range(len(self.totalWords_bigram)):
@@ -60,31 +51,3 @@ class BugReport(object):
             for bug_id in bug_ids:
                 comWord_bigram[bug_id].add(self.totalWords_bigram[i])
         return comWord_bigram
-
-    def hasNonNumbers(self,inputString):
-        return not bool(re.search(r'\d', inputString))
-
-    def prioAndVersDife(self, b2, column_name):
-        if column_name == 'version':
-            if self.hasNonNumbers(self.version) or self.hasNonNumbers(b2.version):
-                return 0.5
-            else:
-                pre_column_list = self.version.split('.')
-                last_column_list = b2.version.split('.')
-                weight = [10, 1, 0.1]
-                different_value = 0
-                for i, j, z in zip(pre_column_list, last_column_list, weight):
-                    if self.hasNonNumbers(i) or self.hasNonNumbers(j):continue
-                    i_value = re.search(r'\d', i)
-                    j_value = re.search(r'\d', j)
-                    different_value += abs(float(i_value.group(0)) - float(j_value.group(0))) * z
-                return float(1 / (1 + different_value))
-        elif column_name == 'priority':
-            if self.hasNonNumbers(self.priority) or self.hasNonNumbers(b2.priority):
-                return 0.5
-            else:
-                pre_column_value = re.search(r'\d', self.priority)
-                last_column_value = re.search(r'\d', b2.priority)
-                return 1 / (1 + abs(float(pre_column_value.group(0)) - float(last_column_value.group(0))))
-        else:
-            return 0

@@ -3,46 +3,13 @@ import pandas as pd
 from nltk.stem.snowball import SnowballStemmer
 import re
 from BugReport import BugReport
-import itertools
 import nltk
-import string, random
-import pickle
+import random
 from REP import REP
 from functools import cmp_to_key
 from collections import defaultdict
 from pandas import DataFrame
-from nltk.tokenize import word_tokenize
 import numpy as np
-from sklearn import preprocessing
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from collections import OrderedDict
-import operator
-# Read key words of java program language
-fp = open(r'../resources/keyword.txt')
-keyword = []
-for line in fp.readlines():
-    keyword.append(line.replace("\n", ""))
-fp.close()
-remove_punctuation_map = dict((ord(char), ' ' + char + ' ') for char in string.punctuation)
-remove_number_map = dict((ord(char), " ") for char in string.digits)
-
-
-# Remove code snippet
-def remove_code(text):
-    temp = text.translate(remove_punctuation_map)
-    temp = temp.translate(remove_number_map)
-    list_words = word_tokenize(temp)
-
-    all = len(list_words)
-    if (all == 0):
-        return ''
-    keywords = len([w for w in list_words if w in keyword])
-    if (1.0 * keywords / all > 0.3):
-        return ''
-    else:
-        return text
-
 
 # Processing the text of BugReport
 def preprocess_br(raw_description):
@@ -77,11 +44,8 @@ def preprocess_br(raw_description):
 
 
 def getBR(bug_series, type=1):
-    # 实例化类对象
     br = BugReport()
-    # 处理一行最末尾的‘\n’
     # bug_series = bug_series.replace('\n', ',').split(',')
-
     br.bugID = bug_series.get('issue_id')
     # summ = bug_series.get('summary')
     # br.summ = summ.split(' ')
@@ -143,29 +107,6 @@ def clean_pandas(data):
     return data
 
 
-def preprocess_strict(raw_description):
-    description = rm_cite(raw_description)
-    # 2. Remove urls
-    text = re.sub("((mailto\:|(news|(ht|f)tp(s?))\://){1}\S+)", " ", description)
-    # 3. Remove Stack Trace
-    start_loc = text.find("Stack trace:")
-    text = text[:start_loc]
-    # 4. Remove hex code
-    text = re.sub(r'(\w+)0x\w+', '', text)
-    # 5. Remove non-letters
-    # letters_only = re.sub("[^a-zA-Z_/\-\.]", " ", description_text)
-    letters_only = re.sub("[^a-zA-Z\.]", " ", text)
-    letters_only = re.sub("\.(?!((c|h|cpp|py)\s+$))", " ", letters_only)
-    # 6. Convert to lower case, tokenize
-    words = [word for sent in nltk.sent_tokenize(letters_only.lower()) for word in nltk.word_tokenize(sent)]
-    # 7. Remove stop words
-    stopwords = set(nltk.corpus.stopwords.words('english'))
-    meaningful_words = [w for w in words if not w in stopwords]
-    # 8. Stemming
-    snowball = SnowballStemmer("english")
-    stems = [snowball.stem(w) for w in meaningful_words]
-    return " ".join(stems)
-
 def rm_cite(raw_text):
     lst = []
     iscite = False
@@ -215,8 +156,6 @@ def bm25F_sort(df):
     relevance_matric=np.array(relevance_list)
     # compute mean value of each row (axis=1)
     mean_array=np.mean(relevance_matric, axis=0)
-    # compute std value of each row (axis=1)
-    std_array=np.std(relevance_matric,axis=0)
 
     for i, rtemp in enumerate(bmRes):
         # bmRes[i].REP = mean_array[i] + std_array[i]
@@ -241,58 +180,47 @@ def init_globa_variable():
 # filter NSBR
 def data_filter(project, times, form, train_way,rank_way='BM25F'):
     datasets = {
-        'ambari': 'Ambari2.csv',
-        'camel': 'Camel2.csv',
+        'ambari': 'Ambari.csv',
+        'camel': 'Camel.csv',
         'chromium': 'Chromium.csv',
-        'derby': 'Derby2.csv',
-        'wicket': 'Wicket2.csv',
+        'derby': 'Derby.csv',
+        'wicket': 'Wicket.csv',
         'chromium_large': 'chromium_large.csv',
-        'mozilla': 'mozilla_merge_update_process2.csv'
+        'mozilla': 'mozilla.csv'
     }
     if project not in datasets:
         raise ValueError
 
     data_file = os.path.join('..', 'resources', datasets[project])
-    pandas_data_file=os.path.join('..', 'resources','pandas_data',project)
-    if os.path.exists(pandas_data_file):
-        df_all=pd.read_pickle(pandas_data_file)
-    else:
-        df_all = pd.read_csv(data_file, sep=',', encoding='ISO-8859-1')
-        # specialized processing with chromium
-        path = os.path.join('..', 'resources', 'Chromium2.csv')
-        if project == 'chromium':
-            if not os.path.exists(path):
-                df_all['summary'] = df_all.apply(lambda x: split_report(x.report, 'summary'), axis=1)
-                df_all['description'] = df_all.apply(lambda x: split_report(x.report, 'description'), axis=1)
-                df_all.to_csv(path, encoding='utf-8')
-            else:
-                df_all = pd.read_csv(path)
-        if project == 'chromium_large' or project == 'mozilla':
-            df_all['summary'] = df_all['bug_title_pro'].apply(lambda x: x.split(' '))
-            df_all['description'] = df_all['bug_description_pro'].apply(lambda x: x.strip().split(' '))
+    df_all = pd.read_csv(data_file, sep=',', encoding='ISO-8859-1')
+    # specialized processing with chromium
+    path = os.path.join('..', 'resources', 'Chromium2.csv')
+    if project == 'chromium':
+        if not os.path.exists(path):
+            df_all['summary'] = df_all.apply(lambda x: split_report(x.report, 'summary'), axis=1)
+            df_all['description'] = df_all.apply(lambda x: split_report(x.report, 'description'), axis=1)
+            df_all.to_csv(path, encoding='utf-8')
         else:
-            # clean the textual fileds
-            df_all = clean_pandas(df_all)
-        df_all.to_pickle(pandas_data_file)
+            df_all = pd.read_csv(path)
+    if project == 'chromium_large' or project == 'mozilla':
+        df_all['summary'] = df_all['bug_title_pro'].apply(lambda x: x.split(' '))
+        df_all['description'] = df_all['bug_description_pro'].apply(lambda x: x.strip().split(' '))
+    else:
+        # clean the textual fileds
+        df_all = clean_pandas(df_all)
     # take the first half as candidate filter data
-    # df=df_all.loc[0:int(len(df_all)/2)]
     if train_way=='wpp':
         df = DataFrame(df_all, index=range(int(len(df_all) / 2)))
     elif train_way=='tpp':
         df=DataFrame(df_all)
     else:
         return None
-    print(len(df))
-    # print the information of columns
-    # print(df.columns)
 
     df_sbr = df[df.Security == 1]
-    path = os.path.join('..', 'resources', rank_way, train_way+'_'+project)
     if rank_way=='BM25F':
-        issue_id_list=BM25F_filter(df,path,times,form,len(df_sbr))
+        issue_id_list=BM25F_filter(df,times,form,len(df_sbr))
 
     # issue_id_list.extend(temp.bugID for temp in BugReport.testBR)
-    # the result set(pandas dataframe) of Training data
     df_filter = df[df.issue_id.map(lambda x: x in issue_id_list)]
     df_train = pd.concat([df_filter, df_sbr], ignore_index=True)
     return df_all, df_train
@@ -304,7 +232,7 @@ rank model is BM25F
 input: dataset(pandas form), intermediate data path, ratio of NSBRs to SBRs, fiter way(ms or ns or none), the number of SBRs
 return: the id of bug reports
 '''
-def BM25F_filter(df, bmres_path,times,form,len_sbr):
+def BM25F_filter(df,times,form,len_sbr):
     bmRes = bm25F_sort(df)
     # take the top-k elements(the size of k is twice that of
     # bmRes=bmRes[:len(BugReport.testBR)*5]

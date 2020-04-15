@@ -1,14 +1,6 @@
-# REP实现&开发者推荐
-# 得到bug report
 from BugReport import BugReport
-import os
-import math
 from Result import Result
-from functools import cmp_to_key
-import config
 import math
-import random
-import re
 class REP(object):
 
     weights = {'w1': 0.9, 'w2': 0.2, 'w_unisum': 3,
@@ -77,35 +69,6 @@ class REP(object):
         TFQ += wf2[0] * t1
         TFQ += wf2[1] * t2
         return (REP.weights['k3_bi'] + 1) * TFQ / (REP.weights['k3_bi'] + TFQ)
-
-    def getBM25FextAndREP(self, tempBR, i):
-        bmRes = []
-        for index, br in enumerate(BugReport.trainBR):
-            bmScore_unigram = 0
-            bmScore_bigram = 0
-            for term in list(set(tempBR.totalWords_unigram).intersection(br.totalWords_unigram)):
-                TFD = self.getTFD_unigram(term, index)
-                bmScore_unigram += self.getIDF_unigram(term) * (
-                        TFD / (TFD + REP.weights['k1_uni'])) * self.getWQ_unigram(term, i)
-            for term in list(set(tempBR.totalWords_bigram).intersection(br.totalWords_bigram)):
-                TFD2 = self.getTFD_bigram(term, index)
-                bmScore_bigram += self.getIDF_bigram(term) * (
-                        TFD2 / (TFD2 + REP.weights['k1_bi'])) * self.getWQ_bigram(term, i)
-
-            res = REP.weights['w1'] * bmScore_unigram
-            res += REP.weights['w2'] * bmScore_bigram
-            res += REP.weights['w3'] * (1 if tempBR.prod == BugReport.trainBR[index].prod else 0)
-            res += REP.weights['w4'] * (1 if tempBR.comp == BugReport.trainBR[index].comp else 0)
-            res += REP.weights['w5'] * (1 if tempBR.sever == BugReport.trainBR[index].sever else 0)
-            res += REP.weights['w6'] *tempBR.prioAndVersDife(BugReport.trainBR[index],'priority')
-            res += REP.weights['w7'] * tempBR.prioAndVersDife(BugReport.trainBR[index], 'version')
-
-            rTemp = Result()
-            rTemp.bug_id = BugReport.trainBR[index].bugID
-            rTemp.docID = index
-            rTemp.REP = res
-            bmRes.append(rTemp)
-        return bmRes
 
     def getBM25F_text(self, tempBR, i):
         bmRes = []

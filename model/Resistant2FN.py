@@ -8,11 +8,11 @@ from data_process import clean_pandas,split_report,BM25F_filter,VSM_filter
 # filter NSBR
 def data_filter(project, times, form, train_way,percent,rank_way='BM25F'):
     datasets = {
-        'ambari': 'Ambari2.csv',
-        'camel': 'Camel2.csv',
+        'ambari': 'Ambari.csv',
+        'camel': 'Camel.csv',
         'chromium': 'Chromium.csv',
-        'derby': 'Derby2.csv',
-        'wicket': 'Wicket2.csv'
+        'derby': 'Derby.csv',
+        'wicket': 'Wicket.csv'
     }
     if project not in datasets:
         raise ValueError
@@ -22,7 +22,7 @@ def data_filter(project, times, form, train_way,percent,rank_way='BM25F'):
 
     df_all = pd.read_csv(data_file, sep=',', encoding='ISO-8859-1')
     # specialized processing with chromium
-    path = os.path.join('..', 'resources', 'Chromium2.csv')
+    path = os.path.join('..', 'resources', 'Chromium.csv')
     if project == 'chromium':
         if not os.path.exists(path):
             df_all['summary'] = df_all.apply(lambda x: split_report(x.report, 'summary'), axis=1)
@@ -63,9 +63,6 @@ def data_filter(project, times, form, train_way,percent,rank_way='BM25F'):
     path = os.path.join('..', 'resources', rank_way, train_way+'_'+project)
     if rank_way=='BM25F':
         filter_issue_id=BM25F_filter(df,path,times,form,len(df_sbr))
-    elif rank_way=='VSM':
-        # vsm filter way
-        filter_issue_id=VSM_filter(df,path,times,form,len(df_sbr))
     else:
         return None
     # the intersection between filter_issue_id and noise_issue_id

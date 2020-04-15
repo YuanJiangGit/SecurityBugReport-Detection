@@ -24,7 +24,7 @@ class SecurityClassifierM():
                 self.models_name.append(exits_classifiers[classifier])
                 self.models.append(SecurityClassifier(classifier))
             else:
-                print('%s分类器不存在'%classifier)
+                print('%s classifier not exists '%classifier)
 
     # train model
     def train(self, train_x, train_y):
